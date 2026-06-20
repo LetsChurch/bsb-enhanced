@@ -24,9 +24,11 @@ msb/                     Majority Standard Bible
 
 bsb_tables.tsv           BSB interlinear table (word -> Strong's), OT + NT
 msb_nt_tables.tsv        MSB NT interlinear table (Majority Text)
+words_of_jesus.jsonl     per-verse red-letter word runs for the BSB
 
 add_strongs.py           inserts inline Strong's numbers
 add_overlay.py           bakes in the source-text-overlay annotations
+add_words_of_jesus.py    adds words-of-Jesus (red-letter) markup to the BSB
 ```
 
 ## Enhancements
@@ -91,23 +93,48 @@ the 506 OT quotations. A minority of quotation spans are approximate where the
 translation paraphrases the quoted text; the cross-reference note is always
 correct.
 
+### 3. Words of Jesus (`add_words_of_jesus.py`)
+
+Jesus's spoken words are wrapped in the red-letter character style,
+`<char style="wj">`, nested *outside* the Strong's/overlay markup (and the
+opening/closing quotation marks pulled inside the span).
+
+```xml
+<char style="wj">“<char style="w" strong="G03107">Blessed are</char>
+  <char style="w" strong="G03588">the</char> …</char>
+```
+
+The MSB already ships with red-letter markup, so only the BSB needed it. The
+plain "bsb2usfm" BSB has none; the publisher's richer BSB export carries it and
+its NT text matches ours word-for-word, so the spans transfer by word index
+(captured in `words_of_jesus.jsonl`) with no fuzzy alignment. Spans are split at
+paragraph boundaries to stay well-formed.
+
+- BSB: 2,302 wj spans added · MSB: 2,319 (pre-existing, untouched).
+
 ## Regenerating
 
 The scripts edit the USX files **in place** and only ever *add* markup —
 existing scripture text is preserved byte-for-byte (verified by XML
-well-formedness plus a scripture-word diff). Both are **idempotent**: a file that
+well-formedness plus a scripture-word diff). All are **idempotent**: a file that
 already carries the markup is skipped, so re-running is safe.
 
 ```sh
-python3 add_strongs.py            # add Strong's numbers (BSB + MSB)
-python3 add_overlay.py            # dry-run: print resolution stats only
-python3 add_overlay.py --apply    # bake in the overlay annotations
+python3 add_strongs.py                  # add Strong's numbers (BSB + MSB)
+python3 add_overlay.py --apply          # bake in the source-text-overlay
+python3 add_words_of_jesus.py --apply   # add red-letter markup to the BSB
 ```
+
+(Omit `--apply` to dry-run and print stats only.)
 
 `add_overlay.py` expects the overlay data at
 `/tmp/source-text-overlay/overlay/overlay_layer1.jsonl`; clone the
 [source-text-overlay](https://github.com/LetsChurch/source-text-overlay) repo
 there (or edit the `OVERLAY` constant) before running.
 
-Order matters: run `add_strongs.py` first — the overlay's divine-name resolution
-keys off the Strong's numbers it adds.
+`add_words_of_jesus.py` reads the committed `words_of_jesus.jsonl`. To
+regenerate that file from a wj-marked BSB export, run
+`python3 add_words_of_jesus.py --generate '<export>/USX_1/*.usx'`.
+
+Order matters: run `add_strongs.py` first — the divine-name resolution and the
+red-letter nesting both key off the Strong's markup it adds.
