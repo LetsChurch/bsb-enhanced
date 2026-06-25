@@ -1,11 +1,10 @@
-# BSB / MSB Enhanced USX
+# BSB / MSB Enriched USX
 
 [USX](https://ubsicap.github.io/usx/) editions of the **Berean Standard Bible
-(BSB)** and the **Majority Standard Bible (MSB)**, enhanced in place with:
+(BSB)** and the **Majority Standard Bible (MSB)**, enriched in place with:
 
 1. **Inline Strong's numbers** on every translated word.
-2. **Source-text overlay** annotations baked into the markup — divine-name
-   marking, divine-name footnotes, and OT-quotation tagging.
+2. **Words-of-Jesus** (red-letter) markup.
 
 Both editions are the same translation; the **MSB differs from the BSB only in
 the New Testament**, where it follows the Majority Text (e.g. Romans 8:1 and the
@@ -16,10 +15,10 @@ identical between the two.
 
 ```
 bsb/                     Berean Standard Bible
-  USX_1/*.usx            66 enhanced book files
+  USX_1/*.usx            66 enriched book files
   styles.xml, versification.vrs, eng_en.ldml
 msb/                     Majority Standard Bible
-  USX_1/*.usx            66 enhanced book files
+  USX_1/*.usx            66 enriched book files
   styles.xml, versification.vrs, eng_en.ldml, metadata.xml, license.xml
 
 bsb_tables.tsv           BSB interlinear table (word -> Strong's), OT + NT
@@ -27,11 +26,10 @@ msb_nt_tables.tsv        MSB NT interlinear table (Majority Text)
 words_of_jesus.jsonl     per-verse red-letter word runs for the BSB
 
 add_strongs.py           inserts inline Strong's numbers
-add_overlay.py           bakes in the source-text-overlay annotations
 add_words_of_jesus.py    adds words-of-Jesus (red-letter) markup to the BSB
 ```
 
-## Enhancements
+## Enrichments
 
 ### 1. Strong's numbers (`add_strongs.py`)
 
@@ -53,50 +51,10 @@ punctuation, quotation marks and footnotes stay outside the tags.
 - Every verse matched a table; ~22 words per edition are left untagged (stray
   source artifacts such as a literal `vvv` marker).
 
-### 2. Source-text overlay (`add_overlay.py`)
-
-Bakes the three features of
-[LetsChurch/source-text-overlay](https://github.com/LetsChurch/source-text-overlay)
-(Layer 1) directly into the USX. Applied to **both** editions.
-
-**`divine_name`** (OT) — the divine name keeps its traditional rendering but is
-wrapped in `<char style="nd">` with a footnote giving the source form. The form
-is taken from the Strong's number already attached (`H03068`→Yahweh,
-`H03069`→Lord Yahweh, `H03050`→Yah).
-
-```xml
-<char style="w" strong="H03068">the <char style="nd">LORD</char><note caller="+"
-  style="f"><char style="ft" closed="false">Or Yahweh</char></note></char>
-```
-
-**`divine_name_note`** (NT) — a footnote where a NT "Lord" represents the OT
-divine name, located by surrounding context.
-
-```xml
-<char style="w" strong="G02962">of the Lord<note caller="+" style="f"><char
-  style="ft" closed="false">In OT, Yahweh, cf. 1 Kin 1:3</char></note></char>
-```
-
-**`ot_quotation`** (NT) — the span quoting the OT is wrapped in
-`<char style="qt">` and given a cross-reference note to the source passage.
-Spans are fuzzy-aligned (the overlay's quote wording differs from the BSB/MSB),
-split at paragraph boundaries to stay well-formed.
-
-```xml
-<char style="qt"><char style="w" strong="G02400">Behold</char>, … <char
-  style="w" strong="G02192">will be with child</char></char><note caller="+"
-  style="x"><char style="xt" closed="false">Is 7:14</char></note>
-```
-
-Per edition: ~6,720 divine-name marks, ~101–102 divine-name notes, ~503–505 of
-the 506 OT quotations. A minority of quotation spans are approximate where the
-translation paraphrases the quoted text; the cross-reference note is always
-correct.
-
-### 3. Words of Jesus (`add_words_of_jesus.py`)
+### 2. Words of Jesus (`add_words_of_jesus.py`)
 
 Jesus's spoken words are wrapped in the red-letter character style,
-`<char style="wj">`, nested *outside* the Strong's/overlay markup (and the
+`<char style="wj">`, nested *outside* the Strong's markup (with the
 opening/closing quotation marks pulled inside the span).
 
 ```xml
@@ -121,20 +79,14 @@ already carries the markup is skipped, so re-running is safe.
 
 ```sh
 python3 add_strongs.py                  # add Strong's numbers (BSB + MSB)
-python3 add_overlay.py --apply          # bake in the source-text-overlay
 python3 add_words_of_jesus.py --apply   # add red-letter markup to the BSB
 ```
 
 (Omit `--apply` to dry-run and print stats only.)
 
-`add_overlay.py` expects the overlay data at
-`/tmp/source-text-overlay/overlay/overlay_layer1.jsonl`; clone the
-[source-text-overlay](https://github.com/LetsChurch/source-text-overlay) repo
-there (or edit the `OVERLAY` constant) before running.
-
 `add_words_of_jesus.py` reads the committed `words_of_jesus.jsonl`. To
 regenerate that file from a wj-marked BSB export, run
 `python3 add_words_of_jesus.py --generate '<export>/USX_1/*.usx'`.
 
-Order matters: run `add_strongs.py` first — the divine-name resolution and the
-red-letter nesting both key off the Strong's markup it adds.
+Order matters: run `add_strongs.py` first — the red-letter nesting keys off the
+Strong's markup it adds.
